@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: finsight-api
+    runtime: docker
+    plan: starter
+    rootDir: apps/api
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: API_PORT
+        value: 8000
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ALPHAVANTAGE_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false        # paste Supabase pooler URL with +asyncpg
+      - key: DATABASE_URL_SYNC
+        sync: false        # same Supabase URL without +asyncpg
+      - key: QDRANT_URL
+        sync: false        # Qdrant Cloud cluster URL
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: SEC_USER_AGENT
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://finsight.vercel.app
