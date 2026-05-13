@@ -7,7 +7,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const ORDER: AgentName[] = ["market", "quant", "news", "sec", "writer", "critic"];
+const ORDER: AgentName[] = ["market", "quant", "news", "sec", "writer"];
 
 export default function ResearchPage({ params }: { params: Promise<{ ticker: string }> }) {
   const { ticker: rawTicker } = use(params);

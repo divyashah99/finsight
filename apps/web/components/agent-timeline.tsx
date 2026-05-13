@@ -2,7 +2,7 @@
 
 import type { AgentEvent, AgentName } from "@/lib/types";
 
-const ORDER: AgentName[] = ["market", "quant", "news", "sec", "writer", "critic"];
+const ORDER: AgentName[] = ["market", "quant", "news", "sec", "writer"];
 
 const LABEL: Record<AgentName, string> = {
   market: "Market Agent",
