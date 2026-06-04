@@ -16,6 +16,8 @@ Built to demonstrate production AI engineering for an AI Engineer role:
 
 ## Architecture
 
+![FinSight Architecture](finsight-diagram.png)
+
 ```
 Next.js 15 (Vercel)  ──SSE──▶  FastAPI (Render)  ──▶  LangGraph orchestrator
                                                             │
@@ -41,6 +43,18 @@ Cross-cutting:
 - **Cache:** Postgres KV with TTL per tool
 - **Rate limits:** persisted token bucket survives restarts
 - **Models:** `gpt-4o-mini` (chat) + `text-embedding-3-small` (RAG)
+
+---
+
+## Example output
+
+A generated memo for **AAPL** — agent timeline, recommendation + conviction, key metrics, and bull/bear cases with SEC citations:
+
+![Memo overview — headline, metrics, bull/bear cases](output/memo-overview.png)
+
+Citation-grounded bull/bear arguments and severity-tagged risks:
+
+![Memo risks — bull/bear detail and risk register](output/memo-risks.png)
 
 ---
 
