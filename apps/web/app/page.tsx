@@ -41,7 +41,7 @@ export default function Home() {
         </form>
 
         <p className="text-xs text-neutral-600">
-          Powered by LangGraph + GPT-4o-mini · Alpha Vantage · SEC EDGAR
+          Powered by LangGraph + GPT-4o-mini · Yahoo Finance · SEC EDGAR
         </p>
       </div>
     </main>

@@ -17,11 +17,13 @@ We use a single MCP server (`alpha_vantage_server`) for now. Additional servers
 from __future__ import annotations
 
 import json
+import os
 import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, AsyncIterator
 
+from langsmith import traceable
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -31,12 +33,16 @@ from finsight.tools.base import ToolResult
 log = get_logger(__name__)
 
 
-# Registry: tool name -> which server provides it
+# Registry: tool name -> which server provides it.
+# NOTE: pass the full environment to the subprocess. With env=None the MCP SDK
+# spawns a *minimal* env (no DATABASE_URL, no HOME), which breaks the cache
+# decorator's DB connection (falls back to localhost:5432) and yfinance's cache
+# dir. Inheriting os.environ gives the server the same config as the API.
 MCP_SERVERS: dict[str, StdioServerParameters] = {
     "alpha_vantage": StdioServerParameters(
         command=sys.executable,
         args=["-m", "finsight.mcp_servers.alpha_vantage_server"],
-        env=None,
+        env=dict(os.environ),
     ),
 }
 
@@ -46,6 +52,7 @@ class MCPClient:
     session: ClientSession
     available_tools: list[str]
 
+    @traceable(run_type="tool", name="mcp.call")
     async def call(self, name: str, **arguments: Any) -> ToolResult:
         if name not in self.available_tools:
             return ToolResult.failure(f"tool not exposed by server: {name}")

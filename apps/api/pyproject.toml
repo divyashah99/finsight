@@ -29,6 +29,7 @@ dependencies = [
     "langchain-core>=1.0",
     "langchain-openai>=1.0",
     "langchain-mcp-adapters>=0.1",         # expose MCP tools to the analyst agent
+    "langsmith>=0.1",                      # tracing + evaluation (evals/)
 
     # MCP — Anthropic's Model Context Protocol
     "mcp>=1.0.0",
@@ -40,6 +41,7 @@ dependencies = [
     # data / quant
     "pandas>=2.2",
     "numpy>=2.0",
+    "yfinance>=0.2.40",        # market data (fundamentals, prices, financials, news)
 
     # sec
     "beautifulsoup4>=4.12",

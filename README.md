@@ -5,7 +5,7 @@ An agentic AI system that turns a stock ticker into a structured investment memo
 Built to demonstrate production AI engineering for an AI Engineer role:
 
 - **Agentic orchestration** — a LangGraph **supervisor** dynamically dispatches specialist sub-agents (fundamentals · technicals · news · filings) in a runtime-decided, bounded loop, then synthesizes the memo. The control flow is model-driven, not a hardcoded pipeline.
-- **MCP** (Model Context Protocol) server exposing Alpha Vantage as tools
+- **MCP** (Model Context Protocol) server exposing market data (Yahoo Finance) as tools
 - **Hybrid RAG** over SEC 10-K / 10-Q filings — dense (OpenAI) **+ sparse BM25** fused with RRF in Qdrant, then an **LLM reranker** (EDGAR → section-aware chunk → embed → retrieve → rerank → cite)
 - **Conversational follow-ups** — a tool-calling analyst agent with **durable memory** (LangGraph Postgres checkpointer) answers questions on the generated memo
 - **Streaming UI** — SSE from FastAPI to Next.js; the live timeline shows the supervisor's actual decisions
@@ -29,7 +29,7 @@ Next.js 15 (Vercel) ──SSE──▶ FastAPI (Render) ──▶ LangGraph supe
                                    │                    │                  │              │
                              get_fundamentals    get_price_history   get_news_    search_filings
                              get_income_stmt     compute_technicals  sentiment    (hybrid RAG +
-                             (MCP · AlphaV.)     (MCP + pandas)       (MCP)         rerank · Qdrant)
+                             (MCP · Yahoo)       (MCP + pandas)       (MCP)         rerank · Qdrant)
                                    └──── findings + citations ──▶ supervisor ◀── loops until "synthesize"
                                                         │
                                                    Synthesizer ─► structured Memo (grounded citations)
@@ -155,7 +155,6 @@ See [.env.example](.env.example). Minimum:
 | Var | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | LLM + embeddings |
-| `ALPHAVANTAGE_API_KEY` | Market data + news (free key: alphavantage.co) |
 | `SEC_USER_AGENT` | EDGAR requires identifying header (`Name email@example.com`) |
 | `DATABASE_URL` / `DATABASE_URL_SYNC` | Postgres (asyncpg / psycopg2 URLs) |
 | `QDRANT_URL` | Qdrant (Cloud or self-hosted) |

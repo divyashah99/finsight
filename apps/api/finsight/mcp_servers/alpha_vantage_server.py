@@ -1,7 +1,9 @@
-"""Alpha Vantage MCP server.
+"""Market-data MCP server (Yahoo Finance backed).
 
-A real Model Context Protocol server that exposes Alpha Vantage as four tools.
-Run as a stdio subprocess; LangGraph agents connect via `tools.mcp_client`.
+A real Model Context Protocol server exposing market data as four tools. The tool
+names keep the `av_*` prefix for backward compatibility, but the data now comes
+from Yahoo Finance via `tools.alpha_vantage` (yfinance) — keyless, no daily cap.
+Run as a stdio subprocess; the specialist agents connect via `tools.mcp_client`.
 
 Run directly:
     python -m finsight.mcp_servers.alpha_vantage_server
