@@ -11,6 +11,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from langsmith import traceable
+
 from finsight.agents.memo_schema import Memo
 from finsight.agents.state import ResearchState, SECEvidence
 from finsight.logging_setup import get_logger
@@ -59,6 +61,7 @@ def _build_user_message(state: ResearchState, sec_evidence: SECEvidence) -> str:
 Produce the structured memo now."""
 
 
+@traceable(run_type="chain", name="synthesizer")
 async def run(state: ResearchState) -> dict[str, Any]:
     ticker = state["ticker"]
     log.info("synthesizer.start ticker=%s findings=%d", ticker, len(state.get("findings") or []))

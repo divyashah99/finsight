@@ -21,10 +21,20 @@ log = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     log.info("app.startup env=%s", settings.app_env)
+    import os
     from contextlib import AsyncExitStack
 
     from finsight.jobs import scheduler
     from finsight.services import vectorstore
+
+    # Export LangSmith env so LangChain/LangGraph auto-tracing + the langsmith SDK
+    # pick it up. No-op when tracing is disabled.
+    if settings.langsmith_tracing and settings.langsmith_api_key:
+        os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
+        os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
+        os.environ["LANGSMITH_ENDPOINT"] = settings.langsmith_endpoint
+        log.info("langsmith.tracing enabled project=%s", settings.langsmith_project)
 
     try:
         await vectorstore.ensure_collection()

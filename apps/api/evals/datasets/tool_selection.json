@@ -1,0 +1,18 @@
+[
+  {
+    "inputs": { "ticker": "AAPL", "question": "What did their latest income statement show — revenue and net income?" },
+    "outputs": { "expected_tool": "av_income_statement" }
+  },
+  {
+    "inputs": { "ticker": "AAPL", "question": "Summarize the supply-chain risks from the latest 10-Q." },
+    "outputs": { "expected_tool": "search_filings" }
+  },
+  {
+    "inputs": { "ticker": "AAPL", "question": "How is recent news sentiment on the stock?" },
+    "outputs": { "expected_tool": "av_news_sentiment" }
+  },
+  {
+    "inputs": { "ticker": "AAPL", "question": "What is the current P/E ratio and market cap?" },
+    "outputs": { "expected_tool": "av_overview" }
+  }
+]

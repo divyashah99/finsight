@@ -13,6 +13,7 @@ never hard-fails on the reranker.
 
 from __future__ import annotations
 
+from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from finsight.logging_setup import get_logger
@@ -51,6 +52,7 @@ def _build_user_message(query: str, hits: list[SearchHit]) -> str:
     return "\n".join(lines)
 
 
+@traceable(run_type="chain", name="reranker.rerank")
 async def rerank(query: str, hits: list[SearchHit], *, top_n: int) -> list[SearchHit]:
     """Reorder `hits` by LLM-judged relevance to `query`; return the top `top_n`.
 

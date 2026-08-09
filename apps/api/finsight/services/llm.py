@@ -25,6 +25,18 @@ log = get_logger(__name__)
 
 _client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=60.0)
 
+# When LangSmith tracing is on, wrap the client so every chat/embed call across
+# the DAG (supervisor, synthesizer, reranker, search_filings embed) is traced —
+# the specialists' ChatOpenAI is auto-traced separately by LangChain callbacks.
+if settings.langsmith_tracing:
+    try:
+        from langsmith.wrappers import wrap_openai
+
+        _client = wrap_openai(_client)
+        log.info("llm.wrap_openai enabled (langsmith tracing)")
+    except Exception as e:  # noqa: BLE001
+        log.warning("llm.wrap_openai_failed error=%s", e)
+
 
 def get_client() -> AsyncOpenAI:
     return _client

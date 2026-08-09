@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from finsight.agents.state import ResearchState
@@ -59,6 +60,7 @@ def _findings_digest(state: ResearchState) -> str:
     return "\n\n".join(f"[{f.agent}] task: {f.task}\n{f.summary}" for f in findings)
 
 
+@traceable(run_type="chain", name="supervisor.route")
 async def route(state: ResearchState) -> RoutingDecision:
     ticker = state["ticker"]
     ran = sorted({f.agent for f in (state.get("findings") or [])})

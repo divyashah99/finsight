@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     # ─── sec
     sec_user_agent: str = "FinSight Research contact@example.com"
 
+    # ─── observability (LangSmith)
+    langsmith_tracing: bool = False
+    langsmith_api_key: str = ""
+    langsmith_project: str = "finsight"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
+
     # ─── misc
     log_level: str = "INFO"
 

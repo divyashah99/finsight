@@ -1,0 +1,18 @@
+[
+  {
+    "inputs": { "ticker": "AAPL", "query": "What are the main cybersecurity risks?" },
+    "outputs": { "expected_section": "risk_factors", "expected_terms": ["cyber", "attack", "information", "security"] }
+  },
+  {
+    "inputs": { "ticker": "AAPL", "query": "supply chain and single-supplier concentration risk" },
+    "outputs": { "expected_section": "risk_factors", "expected_terms": ["supply", "supplier", "component"] }
+  },
+  {
+    "inputs": { "ticker": "AAPL", "query": "management discussion of revenue drivers and margins" },
+    "outputs": { "expected_section": "mdna", "expected_terms": ["revenue", "net sales", "margin", "gross"] }
+  },
+  {
+    "inputs": { "ticker": "AAPL", "query": "legal proceedings and antitrust investigations" },
+    "outputs": { "expected_section": "risk_factors", "expected_terms": ["legal", "antitrust", "investigation", "litigation"] }
+  }
+]
