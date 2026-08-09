@@ -1,0 +1,4 @@
+# Keep shell scripts LF so they run inside Linux containers regardless of the
+# host's git autocrlf setting.
+*.sh text eol=lf
+entrypoint.sh text eol=lf
