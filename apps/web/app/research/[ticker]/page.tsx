@@ -1,73 +1,59 @@
 "use client";
 
 import { AgentTimeline } from "@/components/agent-timeline";
+import { MemoChat } from "@/components/memo-chat";
 import { MemoViewer } from "@/components/memo-viewer";
-import type { AgentEvent, AgentName, Memo } from "@/lib/types";
+import type { Memo, TimelineStep } from "@/lib/types";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const ORDER: AgentName[] = ["market", "quant", "news", "sec", "writer"];
 
 export default function ResearchPage({ params }: { params: Promise<{ ticker: string }> }) {
   const { ticker: rawTicker } = use(params);
   const ticker = rawTicker.toUpperCase();
-  const [memo, setMemo] = useState("");
   const [structuredMemo, setStructuredMemo] = useState<Memo | null>(null);
-  const [events, setEvents] = useState<AgentEvent[]>([]);
+  const [steps, setSteps] = useState<TimelineStep[]>([]);
   const [finalId, setFinalId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const url = `${API_URL}/research/${ticker}`;
-    console.log("[SSE] opening EventSource:", url);
-    const es = new EventSource(url);
+    const es = new EventSource(`${API_URL}/research/${ticker}`);
 
-    es.addEventListener("open", () => console.log("[SSE] open"));
-
-    es.addEventListener("agent_start", (e: MessageEvent) => {
-      console.log("[SSE] agent_start", e.data);
+    es.addEventListener("supervisor_decision", (e: MessageEvent) => {
       const p = JSON.parse(e.data);
-      setEvents((prev) => upsert(prev, p.agent, { status: "running" }));
+      setSteps((prev) => [...prev, { kind: "decision", next: p.next, reason: p.reason }]);
     });
 
-    es.addEventListener("agent_done", (e: MessageEvent) => {
-      console.log("[SSE] agent_done", e.data);
+    es.addEventListener("specialist_done", (e: MessageEvent) => {
       const p = JSON.parse(e.data);
-      setEvents((prev) => {
-        const updated = upsert(prev, p.agent, { status: "done", summary: p.summary });
-        const idx = ORDER.indexOf(p.agent);
-        const next = ORDER[idx + 1];
-        if (next) return upsert(updated, next, { status: "running" });
-        return updated;
-      });
+      setSteps((prev) => [
+        ...prev,
+        { kind: "specialist", agent: p.agent, summary: p.summary, citations: p.citations ?? 0 },
+      ]);
     });
 
     es.addEventListener("final", (e: MessageEvent) => {
-      console.log("[SSE] final");
       const p = JSON.parse(e.data);
       setFinalId(p.report_id);
-      if (p.memo) {
-        setStructuredMemo(p.memo as Memo);
-        if (p.memo.markdown) setMemo(p.memo.markdown);
-      }
+      if (p.thread_id) setThreadId(p.thread_id);
+      if (p.memo) setStructuredMemo(p.memo as Memo);
+      setDone(true);
       es.close();
     });
 
-    es.addEventListener("error", (e: Event) => {
-      // EventSource fires "error" on normal close too — only flag if not closed.
-      if (es.readyState === EventSource.CLOSED) {
-        console.log("[SSE] closed");
-      } else {
-        console.error("[SSE] error event", e);
+    es.addEventListener("error", (e: MessageEvent) => {
+      if (es.readyState === EventSource.CLOSED) return;
+      try {
+        if ((e as MessageEvent).data) setError(JSON.parse((e as MessageEvent).data).error);
+      } catch {
         setError("Connection error");
       }
     });
 
-    return () => {
-      console.log("[SSE] cleanup: closing");
-      es.close();
-    };
+    return () => es.close();
   }, [ticker]);
 
   return (
@@ -78,9 +64,7 @@ export default function ResearchPage({ params }: { params: Promise<{ ticker: str
         </Link>
         <div className="text-right">
           <div className="font-mono text-3xl font-semibold">{ticker}</div>
-          {finalId && (
-            <div className="text-xs text-neutral-600">report {finalId.slice(0, 8)}</div>
-          )}
+          {finalId && <div className="text-xs text-neutral-600">report {finalId.slice(0, 8)}</div>}
         </div>
       </header>
 
@@ -90,22 +74,21 @@ export default function ResearchPage({ params }: { params: Promise<{ ticker: str
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <aside>
-          <AgentTimeline events={events} />
+          <AgentTimeline steps={steps} done={done} />
         </aside>
         <section>
-          <MemoViewer markdown={memo} memo={structuredMemo} />
+          {structuredMemo ? (
+            <MemoViewer markdown="" memo={structuredMemo} />
+          ) : (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-8 text-center text-sm text-neutral-500">
+              The research agent is working — the memo appears when it finishes.
+            </div>
+          )}
+          {threadId && structuredMemo && <MemoChat ticker={ticker} threadId={threadId} />}
         </section>
       </div>
     </main>
   );
-}
-
-function upsert(events: AgentEvent[], agent: AgentName, patch: Partial<AgentEvent>): AgentEvent[] {
-  const existing = events.find((e) => e.agent === agent);
-  if (existing) {
-    return events.map((e) => (e.agent === agent ? { ...e, ...patch } : e));
-  }
-  return [...events, { agent, status: "running", ...patch } as AgentEvent];
 }

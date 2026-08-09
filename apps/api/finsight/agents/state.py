@@ -103,25 +103,39 @@ class AgentError(BaseModel):
     error: str
 
 
-# ─── Top-level graph state ─────────────────────────────────────────────────
+class Finding(BaseModel):
+    """One specialist sub-agent's contribution to the research, accumulated in
+    state so the supervisor can decide what's still missing and the synthesizer
+    can ground the memo."""
+
+    agent: str
+    task: str
+    summary: str
+
+
+# ─── Top-level graph state (agentic) ───────────────────────────────────────
 
 
 class ResearchState(TypedDict, total=False):
-    """LangGraph state.
+    """LangGraph state for the supervisor + specialists architecture.
 
-    `total=False` means every key is optional — agents fill in their slice as
-    they run. The `errors` reducer is `operator.add` so parallel agents can
-    each append without overwriting.
+    The supervisor writes `next_agent`/`next_task`/`supervisor_reason` each turn
+    (last-write-wins). `findings`, `citations`, and `errors` use `operator.add`
+    reducers so each specialist dispatch appends without clobbering.
     """
 
     ticker: str
-    price_bars: list[PriceBar]
-    market: MarketSnapshot | None
-    quant: QuantSignals | None
-    news: NewsBundle | None
-    sec: SECEvidence | None
-    draft_memo: dict[str, Any] | None
-    critique: dict[str, Any] | None
-    final_memo: dict[str, Any] | None
-    revision_count: int
+    request: str
+
+    # supervisor control channel (overwritten each turn)
+    next_agent: str
+    next_task: str
+    supervisor_reason: str
+    dispatch_count: int
+
+    # accumulated evidence (append reducers)
+    findings: Annotated[list[Finding], operator.add]
+    citations: Annotated[list[SECCitation], operator.add]
     errors: Annotated[list[AgentError], operator.add]
+
+    final_memo: dict[str, Any] | None

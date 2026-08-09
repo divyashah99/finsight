@@ -1,8 +1,8 @@
-"""News agent.
+"""News sentiment parsing helpers.
 
-Wraps the Alpha Vantage NEWS_SENTIMENT endpoint via MCP. AV returns per-article
-ticker-specific sentiment scores, so we filter to the requested ticker's
-relevance and compute an aggregate score from there.
+Parse the Alpha Vantage NEWS_SENTIMENT MCP response into a typed `NewsBundle`
+(filter to the ticker's per-article relevance, aggregate a weighted score).
+Pure functions reused by the `get_news_sentiment` research tool.
 
 Aggregate label rules:
     score >  0.15 → bullish
@@ -14,11 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from finsight.agents.state import AgentError, NewsBundle, NewsItem, ResearchState
-from finsight.logging_setup import get_logger
-from finsight.tools.mcp_client import mcp_session
-
-log = get_logger(__name__)
+from finsight.agents.state import NewsBundle, NewsItem
 
 
 def _bucket(score: float) -> str:
@@ -70,20 +66,3 @@ def _parse(data: dict[str, Any], ticker: str) -> NewsBundle:
         aggregate_sentiment=agg,
         aggregate_label=_bucket(agg) if agg is not None else None,
     )
-
-
-async def run(state: ResearchState) -> dict[str, Any]:
-    ticker = state["ticker"]
-    log.info("news.start ticker=%s", ticker)
-    async with mcp_session("alpha_vantage") as mcp:
-        res = await mcp.call("av_news_sentiment", tickers=ticker, limit=25)
-
-    if not res.ok or not isinstance(res.data, dict):
-        return {
-            "news": NewsBundle(),
-            "errors": [AgentError(agent="news", error=res.error or "empty")],
-        }
-
-    bundle = _parse(res.data, ticker)
-    log.info("news.done ticker=%s items=%d label=%s", ticker, len(bundle.items), bundle.aggregate_label)
-    return {"news": bundle}

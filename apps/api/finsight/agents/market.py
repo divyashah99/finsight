@@ -1,20 +1,15 @@
-"""Market agent.
+"""Market data parsing helpers.
 
-Fetches fundamentals + daily price history via the Alpha Vantage MCP server.
-Pure data plumbing: parses MCP responses into typed `MarketSnapshot` and
-`PriceBar` lists. No LLM call here — the Quant and Writer agents reason about
-this data downstream.
+Parse Alpha Vantage MCP responses into typed `MarketSnapshot` / `PriceBar`.
+These are pure functions reused by the `get_fundamentals` / `get_price_history`
+research tools (`tools/research_tools.py`).
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from finsight.agents.state import AgentError, MarketSnapshot, PriceBar, ResearchState
-from finsight.logging_setup import get_logger
-from finsight.tools.mcp_client import mcp_session
-
-log = get_logger(__name__)
+from finsight.agents.state import MarketSnapshot, PriceBar
 
 
 def _to_float(v: Any) -> float | None:
@@ -60,33 +55,3 @@ def _parse_daily(d: dict[str, Any]) -> list[PriceBar]:
         )
     bars.sort(key=lambda b: b.date)  # oldest first
     return bars
-
-
-async def run(state: ResearchState) -> dict[str, Any]:
-    ticker = state["ticker"]
-    log.info("market.start ticker=%s", ticker)
-    errors: list[AgentError] = []
-    snapshot: MarketSnapshot | None = None
-    bars: list[PriceBar] = []
-
-    async with mcp_session("alpha_vantage") as mcp:
-        ov = await mcp.call("av_overview", symbol=ticker)
-        if ov.ok and isinstance(ov.data, dict) and ov.data:
-            snapshot = _parse_overview(ov.data, ticker)
-        else:
-            errors.append(AgentError(agent="market", error=f"overview: {ov.error or 'empty'}"))
-
-        dl = await mcp.call("av_daily", symbol=ticker, outputsize="compact")
-        if dl.ok and isinstance(dl.data, dict):
-            bars = _parse_daily(dl.data)
-            if not bars:
-                errors.append(AgentError(agent="market", error="daily: empty series"))
-        else:
-            errors.append(AgentError(agent="market", error=f"daily: {dl.error or 'empty'}"))
-
-    log.info("market.done ticker=%s bars=%d errors=%d", ticker, len(bars), len(errors))
-    return {
-        "market": snapshot,
-        "price_bars": bars,
-        "errors": errors,
-    }
