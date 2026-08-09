@@ -40,7 +40,9 @@ class Settings(BaseSettings):
     database_url_sync: str = "postgresql://finsight:finsight@localhost:5432/finsight"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
-    qdrant_collection: str = "sec_filings"
+    # bumped from "sec_filings" → the hybrid collection adds a named sparse (BM25)
+    # vector, which requires a fresh collection. Re-ingestion is idempotent + cheap.
+    qdrant_collection: str = "sec_filings_hybrid"
 
     # ─── sec
     sec_user_agent: str = "FinSight Research contact@example.com"

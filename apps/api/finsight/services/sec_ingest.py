@@ -107,9 +107,12 @@ async def _embed_and_store(
     total = 0
     for i in range(0, len(chunks), _EMBED_BATCH):
         batch = chunks[i : i + _EMBED_BATCH]
-        vectors = await llm.embed([c.text for c in batch])
+        texts = [c.text for c in batch]
+        # Dense (OpenAI) + sparse (BM25) embeddings for hybrid retrieval.
+        dense_vectors = await llm.embed(texts)
+        sparse_vectors = await vectorstore.sparse_embed(texts)
         points = []
-        for c, v in zip(batch, vectors, strict=True):
+        for c, dv, sv in zip(batch, dense_vectors, sparse_vectors, strict=True):
             payload = {
                 "ticker": ticker,
                 "cik": cik,
@@ -121,7 +124,7 @@ async def _embed_and_store(
                 "chunk_index": c.chunk_index,
                 "text": c.text,
             }
-            points.append((v, payload))
+            points.append((dv, sv, payload))
         total += await vectorstore.upsert_chunks(points)
         await asyncio.sleep(0)  # cooperate with the event loop
     return total
