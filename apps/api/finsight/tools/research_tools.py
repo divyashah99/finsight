@@ -165,6 +165,11 @@ def make_search_filings(ticker: str) -> BaseTool:
         """Search the company's SEC filings (10-K/10-Q) for passages relevant to
         `query`. Use for risk factors, MD&A, business segments, legal proceedings,
         or anything stated in the filings. Returns the most relevant excerpts."""
+        # Self-heal: make sure the collection exists before querying it. Startup
+        # bootstrap can be missed in fresh/prod environments, which otherwise
+        # 404s here ("Collection ... doesn't exist"). ensure_collection is
+        # idempotent (no-op when the collection is already there).
+        await vectorstore.ensure_collection()
         # Lazy-ingest on first use for this ticker (preserves prior behavior).
         if await vectorstore.count_for_ticker(ticker) == 0:
             log.info("search_filings.ingest ticker=%s", ticker)

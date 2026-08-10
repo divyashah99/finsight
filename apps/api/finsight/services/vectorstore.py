@@ -238,11 +238,18 @@ async def hybrid_search(
 
 async def count_for_ticker(ticker: str) -> int:
     client = get_client()
-    res = await client.count(
-        collection_name=settings.qdrant_collection,
-        count_filter=qm.Filter(
-            must=[qm.FieldCondition(key="ticker", match=qm.MatchValue(value=ticker))]
-        ),
-        exact=True,
-    )
-    return res.count
+    try:
+        res = await client.count(
+            collection_name=settings.qdrant_collection,
+            count_filter=qm.Filter(
+                must=[qm.FieldCondition(key="ticker", match=qm.MatchValue(value=ticker))]
+            ),
+            exact=True,
+        )
+        return res.count
+    except Exception as e:  # noqa: BLE001
+        # A missing collection (fresh/prod env) should read as "no chunks" so the
+        # caller ingests, not a hard 404. ensure_collection() is the real fix; this
+        # is defensive.
+        log.warning("qdrant.count_failed collection=%s reason=%s", settings.qdrant_collection, e)
+        return 0
