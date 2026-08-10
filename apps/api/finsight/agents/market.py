@@ -1,6 +1,6 @@
 """Market data parsing helpers.
 
-Parse Alpha Vantage MCP responses into typed `MarketSnapshot` / `PriceBar`.
+Parse Yahoo Finance MCP responses into typed `MarketSnapshot` / `PriceBar`.
 These are pure functions reused by the `get_fundamentals` / `get_price_history`
 research tools (`tools/research_tools.py`).
 """

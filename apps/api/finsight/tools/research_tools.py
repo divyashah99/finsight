@@ -59,8 +59,8 @@ def make_get_fundamentals(ticker: str) -> BaseTool:
     async def get_fundamentals() -> str:
         """Get company fundamentals for the ticker under research: sector, market
         cap, P/E, EPS, profit margin, revenue, 52-week range, dividend yield."""
-        async with mcp_session("alpha_vantage") as mcp:
-            res = await mcp.call("av_overview", symbol=ticker)
+        async with mcp_session("yfinance") as mcp:
+            res = await mcp.call("yf_overview", symbol=ticker)
         if not (res.ok and isinstance(res.data, dict) and res.data):
             return f"Fundamentals unavailable ({res.error or 'empty response'})."
         snap = market_parse._parse_overview(res.data, ticker)
@@ -74,8 +74,8 @@ def make_get_income_statement(ticker: str) -> BaseTool:
     async def get_income_statement() -> str:
         """Get the latest annual + quarterly income statement (revenue, COGS,
         operating income, net income) for the ticker under research."""
-        async with mcp_session("alpha_vantage") as mcp:
-            res = await mcp.call("av_income_statement", symbol=ticker)
+        async with mcp_session("yfinance") as mcp:
+            res = await mcp.call("yf_income_statement", symbol=ticker)
         if not (res.ok and isinstance(res.data, dict)):
             return f"Income statement unavailable ({res.error or 'empty response'})."
         reports = (res.data.get("annualReports") or [])[:2] + (res.data.get("quarterlyReports") or [])[:2]
@@ -94,8 +94,8 @@ def make_get_income_statement(ticker: str) -> BaseTool:
 
 
 async def _fetch_bars(ticker: str):
-    async with mcp_session("alpha_vantage") as mcp:
-        res = await mcp.call("av_daily", symbol=ticker, outputsize="compact")
+    async with mcp_session("yfinance") as mcp:
+        res = await mcp.call("yf_daily", symbol=ticker, outputsize="compact")
     if not (res.ok and isinstance(res.data, dict)):
         return [], res.error or "empty response"
     return market_parse._parse_daily(res.data), None
@@ -141,8 +141,8 @@ def make_get_news_sentiment(ticker: str) -> BaseTool:
     async def get_news_sentiment() -> str:
         """Get recent news with aggregate sentiment (bullish/neutral/bearish) and
         the top headlines for the ticker under research."""
-        async with mcp_session("alpha_vantage") as mcp:
-            res = await mcp.call("av_news_sentiment", tickers=ticker, limit=25)
+        async with mcp_session("yfinance") as mcp:
+            res = await mcp.call("yf_news_sentiment", tickers=ticker, limit=25)
         if not (res.ok and isinstance(res.data, dict)):
             return f"News unavailable ({res.error or 'empty response'})."
         bundle = news_parse._parse(res.data, ticker)

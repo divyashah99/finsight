@@ -7,7 +7,7 @@ attaching the evaluators in evals/evaluators.py.
     python -m evals.run_evals [memo|rag|analyst|all]
 
 Requires LANGSMITH_API_KEY (+ OPENAI_API_KEY, and a running Qdrant with indexed
-filings for the rag/memo targets, plus MCP/AlphaVantage for analyst/memo).
+filings for the rag/memo targets, plus MCP/Yahoo Finance for analyst/memo).
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ async def analyst_target(inputs: dict[str, Any]) -> dict[str, Any]:
     from finsight.tools.mcp_client import mcp_session
 
     ticker, question = inputs["ticker"], inputs["question"]
-    async with mcp_session("alpha_vantage") as mcp:
+    async with mcp_session("yfinance") as mcp:
         tools = await load_mcp_tools(mcp.session)
         agent = build_analyst(ticker, tools, InMemorySaver(), memo=None)
         res = await agent.ainvoke(
@@ -153,7 +153,7 @@ async def _run_suite(name: str) -> None:
         evaluators=suite["evaluators"],
         experiment_prefix=f"finsight-{name}",
         client=client,
-        max_concurrency=1,  # bound cost + AlphaVantage rate limits
+        max_concurrency=1,  # bound cost + Yahoo Finance request rate
     )
 
 

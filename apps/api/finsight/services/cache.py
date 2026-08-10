@@ -1,13 +1,13 @@
 """Postgres-backed KV cache with TTL.
 
-Keeps Alpha Vantage / OpenAI calls cheap and replayable. We deliberately don't
+Keeps market-data / OpenAI calls cheap and replayable. We deliberately don't
 use Redis — Postgres is already in the stack, and the call volume is tiny.
 
 Usage:
-    val = await cache.get("av:OVERVIEW:AAPL")
+    val = await cache.get("yf:OVERVIEW:AAPL")
     if val is None:
         val = await fetch_overview("AAPL")
-        await cache.set("av:OVERVIEW:AAPL", val, ttl_seconds=86400)
+        await cache.set("yf:OVERVIEW:AAPL", val, ttl_seconds=86400)
 """
 
 from __future__ import annotations

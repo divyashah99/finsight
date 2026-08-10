@@ -2,15 +2,15 @@
 
 Connects to our MCP servers as a subprocess over stdio and re-exposes their
 tools as `ToolResult`-returning async callables. Agents call this — they
-never talk to Alpha Vantage HTTP directly.
+never talk to Yahoo Finance directly.
 
 Lifecycle:
 
     async with mcp_client() as client:
-        snapshot = await client.call("av_overview", symbol="AAPL")
-        bars     = await client.call("av_daily", symbol="AAPL")
+        snapshot = await client.call("yf_overview", symbol="AAPL")
+        bars     = await client.call("yf_daily", symbol="AAPL")
 
-We use a single MCP server (`alpha_vantage_server`) for now. Additional servers
+We use a single MCP server (`yfinance_server`) for now. Additional servers
 (e.g. SEC) plug in by adding entries to `MCP_SERVERS`.
 """
 
@@ -39,9 +39,9 @@ log = get_logger(__name__)
 # decorator's DB connection (falls back to localhost:5432) and yfinance's cache
 # dir. Inheriting os.environ gives the server the same config as the API.
 MCP_SERVERS: dict[str, StdioServerParameters] = {
-    "alpha_vantage": StdioServerParameters(
+    "yfinance": StdioServerParameters(
         command=sys.executable,
-        args=["-m", "finsight.mcp_servers.alpha_vantage_server"],
+        args=["-m", "finsight.mcp_servers.yfinance_server"],
         env=dict(os.environ),
     ),
 }
@@ -60,7 +60,7 @@ class MCPClient:
         res = await self.session.call_tool(name, arguments=arguments)
 
         # MCP returns a list of content blocks; we standardize on a single
-        # JSON-encoded TextContent (see alpha_vantage_server).
+        # JSON-encoded TextContent (see yfinance_server).
         if not res.content:
             return ToolResult.failure("mcp: empty response")
         text = getattr(res.content[0], "text", None)
@@ -80,7 +80,7 @@ class MCPClient:
 
 
 @asynccontextmanager
-async def mcp_session(server: str = "alpha_vantage") -> AsyncIterator[MCPClient]:
+async def mcp_session(server: str = "yfinance") -> AsyncIterator[MCPClient]:
     """Open a stdio MCP session against the named server.
 
     The server process is spawned on enter and torn down on exit. For long-lived

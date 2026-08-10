@@ -1,6 +1,6 @@
 """News sentiment parsing helpers.
 
-Parse the Alpha Vantage NEWS_SENTIMENT MCP response into a typed `NewsBundle`
+Parse the Yahoo Finance news MCP response into a typed `NewsBundle`
 (filter to the ticker's per-article relevance, aggregate a weighted score).
 Pure functions reused by the `get_news_sentiment` research tool.
 

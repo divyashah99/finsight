@@ -1,14 +1,11 @@
 """Market-data client — Yahoo Finance (yfinance) backed.
 
-Historically this wrapped Alpha Vantage, but its free tier (25 requests/day)
-made the demo unusable. We now fetch from Yahoo Finance via `yfinance` — keyless
-and without a hard daily cap. To avoid churn, each function keeps its name and
-returns the **same dict shape** the parse helpers expect (`market._parse_overview`,
-`market._parse_daily`, `news._parse`), so the MCP server, research tools, and
-agents are unchanged. `yfinance` is synchronous, so calls run in a thread.
-
-Caching + retry decorators still apply; the per-key rate limiter is dropped
-(no API key / per-key quota anymore).
+Fetches fundamentals, daily prices, income statements, and news from Yahoo
+Finance via `yfinance` — keyless and without a hard daily cap. Each function
+returns a flat dict the parse helpers expect (`market._parse_overview`,
+`market._parse_daily`, `news._parse`). `yfinance` is synchronous, so calls run
+in a thread. Caching + retry decorators still apply; there is no per-key rate
+limiter (yfinance has no API key / per-key quota).
 """
 
 from __future__ import annotations
@@ -42,7 +39,7 @@ def _fetch_overview(symbol: str) -> dict[str, Any]:
     info = yf.Ticker(symbol).get_info() or {}
     if not info or not (info.get("longName") or info.get("shortName")):
         return {}
-    # Map to the Alpha-Vantage field names the parser expects.
+    # Map to the field names the parser (market._parse_overview) expects.
     return {
         "Name": info.get("longName") or info.get("shortName"),
         "Sector": info.get("sector"),
@@ -152,28 +149,28 @@ async def _run(fn, *args) -> ToolResult:
 # ─── Public endpoints (names + shapes preserved) ───────────────────────────
 
 
-@cached(prefix="av:overview", ttl_seconds=86400)
+@cached(prefix="yf:overview", ttl_seconds=86400)
 @with_retry(attempts=3)
 async def overview(symbol: str) -> ToolResult:
     """Company fundamentals snapshot: sector, P/E, EPS, market cap, etc."""
     return await _run(_fetch_overview, symbol)
 
 
-@cached(prefix="av:daily", ttl_seconds=43200)
+@cached(prefix="yf:daily", ttl_seconds=43200)
 @with_retry(attempts=3)
 async def daily(symbol: str, outputsize: str = "compact") -> ToolResult:
     """Daily OHLCV time series (~1y of history)."""
     return await _run(_fetch_daily, symbol)
 
 
-@cached(prefix="av:income", ttl_seconds=86400)
+@cached(prefix="yf:income", ttl_seconds=86400)
 @with_retry(attempts=3)
 async def income_statement(symbol: str) -> ToolResult:
     """Quarterly + annual income statements."""
     return await _run(_fetch_income, symbol)
 
 
-@cached(prefix="av:news", ttl_seconds=3600)
+@cached(prefix="yf:news", ttl_seconds=3600)
 @with_retry(attempts=3)
 async def news_sentiment(tickers: str, limit: int = 20) -> ToolResult:
     """Recent news headlines for a ticker. (Yahoo has no sentiment scores, so the

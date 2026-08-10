@@ -5,7 +5,7 @@ decides which tools to call and remembers the conversation via the LangGraph
 Postgres checkpointer, keyed by `thread_id`.
 
 Event schema:
-    event: tool    data: {"name": "av_income_statement"}   # a tool was invoked
+    event: tool    data: {"name": "yf_income_statement"}   # a tool was invoked
     event: token   data: {"delta": "..."}                   # answer token
     event: done    data: {}
     event: error   data: {"error": "..."}
@@ -77,7 +77,7 @@ async def chat(ticker: str, body: ChatRequest, request: Request) -> EventSourceR
 
     async def event_stream() -> AsyncIterator[dict[str, Any]]:
         try:
-            async with mcp_session("alpha_vantage") as mcp:
+            async with mcp_session("yfinance") as mcp:
                 from langchain_mcp_adapters.tools import load_mcp_tools
 
                 mcp_tools = await load_mcp_tools(mcp.session)

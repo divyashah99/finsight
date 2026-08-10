@@ -69,14 +69,14 @@ Citation-grounded bull/bear arguments and severity-tagged risks:
 A LangGraph **supervisor** ([agents/supervisor.py](apps/api/finsight/agents/supervisor.py)) decides at each step which specialist to dispatch (or to stop and synthesize), and reacts to what it finds. The specialists ([agents/specialists.py](apps/api/finsight/agents/specialists.py)) are tool-calling `create_agent` sub-agents. The **dispatch cap lives in the graph** (`MAX_DISPATCHES` in [agents/graph.py](apps/api/finsight/agents/graph.py)), not the model — an LLM that can decide its own loop budget is a liability.
 
 ### 2. Real MCP server — not a hand-rolled wrapper
-[apps/api/finsight/mcp_servers/alpha_vantage_server.py](apps/api/finsight/mcp_servers/alpha_vantage_server.py) is a real stdio MCP server using Anthropic's `mcp` SDK, exposing four tools (`av_overview`, `av_daily`, `av_income_statement`, `av_news_sentiment`). The specialists reach it through the research tools in [tools/research_tools.py](apps/api/finsight/tools/research_tools.py) — the same protocol Claude Desktop or Cursor would use. You can also drop it into Claude Desktop directly:
+[apps/api/finsight/mcp_servers/yfinance_server.py](apps/api/finsight/mcp_servers/yfinance_server.py) is a real stdio MCP server using Anthropic's `mcp` SDK, exposing four tools (`yf_overview`, `yf_daily`, `yf_income_statement`, `yf_news_sentiment`) backed by Yahoo Finance. The specialists reach it through the research tools in [tools/research_tools.py](apps/api/finsight/tools/research_tools.py) — the same protocol Claude Desktop or Cursor would use. You can also drop it into Claude Desktop directly:
 
 ```json
 {
   "mcpServers": {
-    "alpha-vantage": {
+    "yahoo-finance": {
       "command": "python",
-      "args": ["-m", "finsight.mcp_servers.alpha_vantage_server"]
+      "args": ["-m", "finsight.mcp_servers.yfinance_server"]
     }
   }
 }
@@ -86,7 +86,7 @@ A LangGraph **supervisor** ([agents/supervisor.py](apps/api/finsight/agents/supe
 SEC filings are chunked by recognized 10-K sections ([services/chunker.py](apps/api/finsight/services/chunker.py)) and indexed with **both** a dense OpenAI embedding and a sparse BM25 vector. `search_filings` runs both and fuses them with RRF in Qdrant ([services/vectorstore.py](apps/api/finsight/services/vectorstore.py) `hybrid_search`), then an **LLM reranker** ([services/reranker.py](apps/api/finsight/services/reranker.py)) reorders the pool by relevance. Dense alone misses exact lexical hits (defined terms, "Item 1A"); the sparse branch catches them. Memo citations are 1-based indices into the collected evidence, so the model can't hallucinate URLs.
 
 ### 4. Grounded synthesis + conversational memory
-The synthesizer ([agents/synthesizer.py](apps/api/finsight/agents/synthesizer.py)) makes one structured pass into a strict-JSON `Memo` ([agents/memo_schema.py](apps/api/finsight/agents/memo_schema.py)), grounded in the citations the filings agent collected. Afterwards, a follow-up analyst agent ([agents/analyst.py](apps/api/finsight/agents/analyst.py)) answers questions on the memo — it picks tools itself (reviving `av_income_statement`) and remembers the conversation via a LangGraph **Postgres checkpointer** keyed by `thread_id`.
+The synthesizer ([agents/synthesizer.py](apps/api/finsight/agents/synthesizer.py)) makes one structured pass into a strict-JSON `Memo` ([agents/memo_schema.py](apps/api/finsight/agents/memo_schema.py)), grounded in the citations the filings agent collected. Afterwards, a follow-up analyst agent ([agents/analyst.py](apps/api/finsight/agents/analyst.py)) answers questions on the memo — it picks tools itself (e.g. `yf_income_statement`) and remembers the conversation via a LangGraph **Postgres checkpointer** keyed by `thread_id`.
 
 ### 5. MCP-style decorators on every tool
 Caching, rate-limiting, and retry are decorator composition ([tools/base.py](apps/api/finsight/tools/base.py)). Order matters: `cached → rate_limited → with_retry → raw call`. Cache hits cost zero tokens; retries can't double-spend the rate-limit bucket.
@@ -102,8 +102,8 @@ finsight/
 │   │   └── finsight/
 │   │       ├── agents/             # supervisor, specialists, synthesizer, analyst + graph, state, memo_schema
 │   │       │                       #   (quant/market/news kept as parse/compute helpers)
-│   │       ├── mcp_servers/        # alpha_vantage_server (MCP stdio)
-│   │       ├── tools/              # research_tools (agent tools), mcp_client, alpha_vantage, edgar, base
+│   │       ├── mcp_servers/        # yfinance_server (MCP stdio)
+│   │       ├── tools/              # research_tools (agent tools), mcp_client, yfinance_client, edgar, base
 │   │       ├── services/           # vectorstore (hybrid), reranker, llm, chunker, sec_ingest, cache, rate_limit
 │   │       ├── routers/            # research (SSE), chat (follow-up SSE), reports, ingest
 │   │       ├── jobs/               # apscheduler
@@ -123,7 +123,7 @@ finsight/
 
 ```bash
 cp .env.example .env
-# Fill in OPENAI_API_KEY and ALPHAVANTAGE_API_KEY at minimum.
+# Fill in OPENAI_API_KEY at minimum (market data via Yahoo Finance needs no key).
 
 # 1. Start Postgres + Qdrant
 docker compose up -d postgres qdrant

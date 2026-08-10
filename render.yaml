@@ -13,8 +13,6 @@ services:
         value: 8000
       - key: OPENAI_API_KEY
         sync: false
-      - key: ALPHAVANTAGE_API_KEY
-        sync: false
       - key: DATABASE_URL
         sync: false        # paste Supabase pooler URL with +asyncpg
       - key: DATABASE_URL_SYNC

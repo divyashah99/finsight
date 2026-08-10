@@ -6,9 +6,8 @@ Follow-up questions, however, are open-ended — you can't hardcode a graph for
 risks". So follow-ups are handled by a genuine tool-calling agent:
 
 - **Tools** (the LLM decides which to call):
-    * the Alpha Vantage MCP server's tools, loaded via `langchain-mcp-adapters`
-      (this is what finally exercises `av_income_statement`, which the DAG never
-      calls), and
+    * the Yahoo Finance MCP server's tools, loaded via `langchain-mcp-adapters`
+      (fundamentals, prices, income statement, news), and
     * `search_filings` — hybrid (dense + BM25) retrieval + LLM rerank over the
       company's ingested SEC filings.
 - **Memory**: an `AsyncPostgresSaver` checkpointer keyed by `thread_id`, so the
