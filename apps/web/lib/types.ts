@@ -1,12 +1,10 @@
-export type AgentName = "market" | "quant" | "news" | "sec" | "writer" | "critic";
+// Agentic timeline: the supervisor decides the sequence at runtime, so the
+// timeline is a dynamic list of decisions + specialist completions.
+export type SpecialistName = "fundamentals" | "technicals" | "news" | "filings";
 
-export type AgentStatus = "pending" | "running" | "done" | "error";
-
-export type AgentEvent = {
-  agent: AgentName;
-  status: AgentStatus;
-  summary?: string;
-};
+export type TimelineStep =
+  | { kind: "decision"; next: string; reason: string }
+  | { kind: "specialist"; agent: string; summary: string; citations: number };
 
 export type Recommendation = "buy" | "hold" | "sell" | "no_opinion";
 
@@ -21,6 +19,12 @@ export type Risk = {
   detail: string;
   severity: "low" | "medium" | "high";
   citation_ids: number[];
+};
+
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  tools?: string[];
 };
 
 export type Memo = {

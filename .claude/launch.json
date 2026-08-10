@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "finsight-web",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "web", "dev", "--port", "3002"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "--prefix", "apps/web", "dev", "--", "--port", "3002"],
       "port": 3002,
       "autoPort": false
     }

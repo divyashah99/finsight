@@ -19,7 +19,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from finsight.agents.state import AgentError, QuantSignals, ResearchState
+from finsight.agents.state import PriceBar, QuantSignals
 from finsight.logging_setup import get_logger
 
 log = get_logger(__name__)
@@ -83,15 +83,14 @@ def _summarize(q: QuantSignals) -> str:
     return " · ".join(parts) if parts else "insufficient history"
 
 
-async def run(state: ResearchState) -> dict[str, Any]:
-    ticker = state["ticker"]
-    bars = state.get("price_bars") or []
+def compute_signals(bars: list[PriceBar]) -> QuantSignals:
+    """Compute technical indicators from a daily price series.
+
+    Pure function (no I/O) so it's reused by the `compute_technicals` tool and is
+    trivially unit-testable with a synthetic series.
+    """
     if len(bars) < 20:
-        log.info("quant.skip ticker=%s bars=%d", ticker, len(bars))
-        return {
-            "quant": QuantSignals(summary="insufficient history"),
-            "errors": [AgentError(agent="quant", error=f"only {len(bars)} bars available")],
-        }
+        return QuantSignals(summary="insufficient history")
 
     df = pd.DataFrame([b.model_dump() for b in bars])
     df["date"] = pd.to_datetime(df["date"])
@@ -121,5 +120,4 @@ async def run(state: ResearchState) -> dict[str, Any]:
         above_sma_200=(last_close > last_sma_200) if (last_close and last_sma_200) else None,
     )
     q.summary = _summarize(q)
-    log.info("quant.done ticker=%s summary=%s", ticker, q.summary)
-    return {"quant": q}
+    return q

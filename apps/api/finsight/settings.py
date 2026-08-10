@@ -30,20 +30,23 @@ class Settings(BaseSettings):
     openai_chat_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
 
-    # ─── alpha vantage
-    alphavantage_api_key: str = "demo"
-    alphavantage_rate_per_min: int = 5
-    alphavantage_rate_per_day: int = 25
-
     # ─── storage
     database_url: str = "postgresql+asyncpg://finsight:finsight@localhost:5432/finsight"
     database_url_sync: str = "postgresql://finsight:finsight@localhost:5432/finsight"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
-    qdrant_collection: str = "sec_filings"
+    # bumped from "sec_filings" → the hybrid collection adds a named sparse (BM25)
+    # vector, which requires a fresh collection. Re-ingestion is idempotent + cheap.
+    qdrant_collection: str = "sec_filings_hybrid"
 
     # ─── sec
     sec_user_agent: str = "FinSight Research contact@example.com"
+
+    # ─── observability (LangSmith)
+    langsmith_tracing: bool = False
+    langsmith_api_key: str = ""
+    langsmith_project: str = "finsight"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
 
     # ─── misc
     log_level: str = "INFO"

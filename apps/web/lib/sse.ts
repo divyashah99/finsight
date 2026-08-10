@@ -28,21 +28,26 @@ export async function* readSSE(
   const decoder = new TextDecoder();
   let buffer = "";
 
+  // Frames are separated by a blank line; handle both LF (\n\n) and CRLF
+  // (\r\n\r\n) since sse-starlette emits CRLF. Splitting lines on /\r?\n/ also
+  // strips the trailing \r that would otherwise break JSON.parse on the data.
+  const FRAME_SEP = /\r?\n\r?\n/;
+
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
 
-    let idx: number;
-    while ((idx = buffer.indexOf("\n\n")) !== -1) {
-      const frame = buffer.slice(0, idx);
-      buffer = buffer.slice(idx + 2);
+    let m: RegExpMatchArray | null;
+    while ((m = buffer.match(FRAME_SEP)) !== null && m.index !== undefined) {
+      const frame = buffer.slice(0, m.index);
+      buffer = buffer.slice(m.index + m[0].length);
 
       let event = "message";
       const dataLines: string[] = [];
-      for (const line of frame.split("\n")) {
+      for (const line of frame.split(/\r?\n/)) {
         if (line.startsWith("event:")) event = line.slice(6).trim();
-        else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).replace(/^ /, ""));
       }
       if (dataLines.length === 0) continue;
       yield { event, data: dataLines.join("\n") };

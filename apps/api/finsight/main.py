@@ -21,19 +21,50 @@ log = get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging()
     log.info("app.startup env=%s", settings.app_env)
+    import os
+    from contextlib import AsyncExitStack
+
     from finsight.jobs import scheduler
     from finsight.services import vectorstore
+
+    # Export LangSmith env so LangChain/LangGraph auto-tracing + the langsmith SDK
+    # pick it up. No-op when tracing is disabled.
+    if settings.langsmith_tracing and settings.langsmith_api_key:
+        os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
+        os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
+        os.environ["LANGSMITH_ENDPOINT"] = settings.langsmith_endpoint
+        log.info("langsmith.tracing enabled project=%s", settings.langsmith_project)
 
     try:
         await vectorstore.ensure_collection()
     except Exception as e:  # noqa: BLE001
         log.warning("qdrant.bootstrap_failed error=%s", e)
 
+    # LangGraph Postgres checkpointer — durable memory for the follow-up analyst
+    # agent. Held open for the app's lifetime via an exit stack. psycopg (v3)
+    # wants a plain libpq DSN, so we use the sync-style URL (no +asyncpg driver).
+    app.state.checkpointer = None
+    cp_stack = AsyncExitStack()
+    try:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+        saver = await cp_stack.enter_async_context(
+            AsyncPostgresSaver.from_conn_string(settings.database_url_sync)
+        )
+        await saver.setup()
+        app.state.checkpointer = saver
+        log.info("checkpointer.ready")
+    except Exception as e:  # noqa: BLE001
+        log.warning("checkpointer.init_failed error=%s", e)
+
     scheduler.start()
+
     try:
         yield
     finally:
         scheduler.shutdown()
+        await cp_stack.aclose()
         log.info("app.shutdown")
 
 
@@ -85,6 +116,13 @@ def _register_routers(app: FastAPI) -> None:
         app.include_router(ingest.router)
     except ImportError:
         pass
+
+    try:
+        from finsight.routers import chat
+
+        app.include_router(chat.router)
+    except ImportError:
+        log.warning("chat router not available yet")
 
 
 app = create_app()

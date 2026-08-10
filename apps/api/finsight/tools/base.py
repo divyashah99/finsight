@@ -5,7 +5,7 @@ Why we wrap MCP/HTTP tools with our own decorators:
 - **Caching** sits in front of the tool so cache hits never burn an MCP call
   (or an API quota). Keyed on tool name + canonical args.
 - **Rate limiting** uses the persisted token bucket — survives restarts so we
-  don't accidentally blow the Alpha Vantage daily quota during dev.
+  don't accidentally blow a provider's rate limits during dev.
 - **Retry** wraps the *underlying* call only, not cache hits. Exponential
   backoff via tenacity on transient errors (5xx, network).
 

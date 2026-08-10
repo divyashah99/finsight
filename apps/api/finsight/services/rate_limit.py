@@ -1,6 +1,6 @@
 """Persisted token-bucket rate limiter.
 
-State lives in Postgres so limits survive container restarts (Alpha Vantage's
+State lives in Postgres so limits survive container restarts (a provider's
 daily quota would otherwise reset every deploy). We acquire one token per call;
 if no token is available, the call blocks for up to `max_wait_seconds` waiting
 for refill — past that we raise `RateLimitExceeded`.

@@ -32,6 +32,8 @@ class Run(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ticker: Mapped[str] = mapped_column(String(16), index=True)
+    # LangGraph checkpointer thread id for the follow-up analyst conversation.
+    thread_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(32), default="running")  # running|done|error
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
@@ -46,6 +48,8 @@ class Report(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     ticker: Mapped[str] = mapped_column(String(16), index=True)
+    # Links the memo to its follow-up chat thread (LangGraph checkpointer).
+    thread_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     memo: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
 

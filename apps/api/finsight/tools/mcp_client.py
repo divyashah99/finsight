@@ -2,26 +2,28 @@
 
 Connects to our MCP servers as a subprocess over stdio and re-exposes their
 tools as `ToolResult`-returning async callables. Agents call this — they
-never talk to Alpha Vantage HTTP directly.
+never talk to Yahoo Finance directly.
 
 Lifecycle:
 
     async with mcp_client() as client:
-        snapshot = await client.call("av_overview", symbol="AAPL")
-        bars     = await client.call("av_daily", symbol="AAPL")
+        snapshot = await client.call("yf_overview", symbol="AAPL")
+        bars     = await client.call("yf_daily", symbol="AAPL")
 
-We use a single MCP server (`alpha_vantage_server`) for now. Additional servers
+We use a single MCP server (`yfinance_server`) for now. Additional servers
 (e.g. SEC) plug in by adding entries to `MCP_SERVERS`.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any, AsyncIterator
 
+from langsmith import traceable
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -31,12 +33,16 @@ from finsight.tools.base import ToolResult
 log = get_logger(__name__)
 
 
-# Registry: tool name -> which server provides it
+# Registry: tool name -> which server provides it.
+# NOTE: pass the full environment to the subprocess. With env=None the MCP SDK
+# spawns a *minimal* env (no DATABASE_URL, no HOME), which breaks the cache
+# decorator's DB connection (falls back to localhost:5432) and yfinance's cache
+# dir. Inheriting os.environ gives the server the same config as the API.
 MCP_SERVERS: dict[str, StdioServerParameters] = {
-    "alpha_vantage": StdioServerParameters(
+    "yfinance": StdioServerParameters(
         command=sys.executable,
-        args=["-m", "finsight.mcp_servers.alpha_vantage_server"],
-        env=None,
+        args=["-m", "finsight.mcp_servers.yfinance_server"],
+        env=dict(os.environ),
     ),
 }
 
@@ -46,6 +52,7 @@ class MCPClient:
     session: ClientSession
     available_tools: list[str]
 
+    @traceable(run_type="tool", name="mcp.call")
     async def call(self, name: str, **arguments: Any) -> ToolResult:
         if name not in self.available_tools:
             return ToolResult.failure(f"tool not exposed by server: {name}")
@@ -53,7 +60,7 @@ class MCPClient:
         res = await self.session.call_tool(name, arguments=arguments)
 
         # MCP returns a list of content blocks; we standardize on a single
-        # JSON-encoded TextContent (see alpha_vantage_server).
+        # JSON-encoded TextContent (see yfinance_server).
         if not res.content:
             return ToolResult.failure("mcp: empty response")
         text = getattr(res.content[0], "text", None)
@@ -73,7 +80,7 @@ class MCPClient:
 
 
 @asynccontextmanager
-async def mcp_session(server: str = "alpha_vantage") -> AsyncIterator[MCPClient]:
+async def mcp_session(server: str = "yfinance") -> AsyncIterator[MCPClient]:
     """Open a stdio MCP session against the named server.
 
     The server process is spawned on enter and torn down on exit. For long-lived

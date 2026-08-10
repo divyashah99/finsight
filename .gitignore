@@ -34,3 +34,6 @@ Thumbs.db
 data/
 *.sqlite
 *.db
+
+# local compose overrides (not committed)
+docker-compose.override.yml
